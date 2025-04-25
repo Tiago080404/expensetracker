@@ -32,6 +32,14 @@ export default {
     setCategoryFilter(selectedCategories) {
       this.activeCategoryFilter = selectedCategories;
     },
+    async getExpenses() {
+      const response = await fetch("http://localhost:8080/expenses/user/2", {
+        method: "GET",
+        "Content-type": "application/json",
+      });
+      const data = await response.json();
+      console.log(data);
+    },
   },
   computed: {
     filteredItems() {
@@ -65,6 +73,9 @@ export default {
 
       return filtered;
     },
+  },
+  async mounted() {
+    await this.getExpenses();
   },
 };
 </script>

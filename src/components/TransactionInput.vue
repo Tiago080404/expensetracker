@@ -36,6 +36,45 @@ export default {
       });
       this.$emit("newitems", this.newExpense.categories);
     },
+    async tryAddDb() {
+      console.log(this.itemCategory);
+      const response = await fetch(
+        `http://localhost:8080/categories/${this.itemCategory}`,
+        {
+          method: "GET",
+          "Content-type": "application/json",
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log(data[0].id);
+      const categoryId = data[0].id;
+      //hier dann den insert machen mit der id
+      await this.insertInDb(categoryId);
+    },
+    async insertInDb(categoryId) {
+      console.log(this.dateItem);
+      const response = await fetch("http://localhost:8080/expenses", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          expenseName: this.itemName,
+          expenseDate: this.dateItem,
+          byUser: {
+            id: 2, //das funktioniert erst mit user auth
+          },
+          category: {
+            id: categoryId,
+          },
+        }),
+      });
+      const data = await response.json();
+      console.log(data);
+    },
   },
 };
 </script>
@@ -88,6 +127,7 @@ export default {
       <button @click="addItem" class="btn btn-outline-primary" id="add-btn">
         Add Expense
       </button>
+      <button @click="tryAddDb">add</button>
     </label>
   </div>
 </template>
