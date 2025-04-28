@@ -9,6 +9,7 @@ export default {
       cats: {},
       searchValue: "",
       activeCategoryFilter: [],
+      onlyCategories: null,
     };
   },
   components: {
@@ -32,6 +33,22 @@ export default {
     setCategoryFilter(selectedCategories) {
       this.activeCategoryFilter = selectedCategories;
     },
+    async getCategoriesDb() {
+      try {
+        const response = await fetch("http://localhost:8080/categories/all", {
+          method: "GET",
+          headers: {
+            "Content-type": "application/json",
+          },
+        });
+        const data = await response.json();
+        console.log("DB Categories", data);
+        this.onlyCategories = data;
+      } catch (err) {
+        console.log(err);
+      }
+    },
+
     async getExpenses() {
       const response = await fetch("http://localhost:8080/expenses/user/2", {
         method: "GET",
@@ -39,9 +56,28 @@ export default {
       });
       const data = await response.json();
       console.log(data);
+      this.cats = this.chagneDataObj(data);
+    },
+    chagneDataObj(data) {
+      const grouped = {};
+      data.forEach((item) => {
+        console.log(item.categoryName);
+        if (!grouped[item.categoryName]) {
+          grouped[item.categoryName] = [];
+        }
+        grouped[item.categoryName].push({
+          name: item.expenseName,
+          cost: item.expenseCost,
+          date: item.expenseDate,
+        });
+      });
+      return grouped;
     },
   },
   computed: {
+    /*     getOnlyCategories() {
+      return Object.keys(this.cats); //das kann vllt gleich raus
+    }, */
     filteredItems() {
       let filtered = this.cats;
 
@@ -76,6 +112,7 @@ export default {
   },
   async mounted() {
     await this.getExpenses();
+    await this.getCategoriesDb();
   },
 };
 </script>
@@ -86,6 +123,9 @@ export default {
   <TransactionInput
     @categories="updateCategories"
     @newitems="updateItems"
+    @newinsert="getExpenses"
+    @newCatInsert="getCategoriesDb"
+    :categories="onlyCategories"
   ></TransactionInput>
   <CategoryFilter
     :categories="cats"
