@@ -8,36 +8,35 @@ export default {
       itemCategory: "",
       newCategoryName: "",
       selectedCategory: null,
-      newExpense: {
-        categories: {
-          fun: [],
-          car: [],
-          food: [],
-        },
-      },
     };
   },
+  props: {
+    categories: Array,
+  },
   methods: {
-    addCategory() {
-      console.log(this.newExpense.categories);
-      this.newExpense.categories = {
-        ...this.newExpense.categories,
-        [this.newCategoryName]: [],
-      };
-      console.log("new cats:", this.newExpense.categories);
-      this.$emit("categories", this.newExpense.categories);
-      this.newCategoryName = "";
+    async insertNewCategory() {
+      try {
+        const response = await fetch("http://localhost:8080/categories", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+          body: JSON.stringify({
+            catName: this.newCategoryName,
+          }),
+        });
+        await response.json();
+        if (response.ok) {
+          console.log("got inserted");
+          this.$emit("newCatInsert");
+        }
+      } catch (err) {
+        console.log(err);
+      }
     },
-    addItem() {
-      this.newExpense.categories[this.itemCategory].push({
-        name: this.itemName,
-        cost: this.itemCost,
-        date: this.dateItem,
-      });
-      this.$emit("newitems", this.newExpense.categories);
-    },
+
     async tryAddDb() {
-      console.log(this.itemCategory);
+      //noch umbennen schlechter Name
       const response = await fetch(
         `http://localhost:8080/categories/${this.itemCategory}`,
         {
@@ -63,6 +62,7 @@ export default {
         },
         body: JSON.stringify({
           expenseName: this.itemName,
+          expenseCost: this.itemCost,
           expenseDate: this.dateItem,
           byUser: {
             id: 2, //das funktioniert erst mit user auth
@@ -74,6 +74,12 @@ export default {
       });
       const data = await response.json();
       console.log(data);
+      this.$emit("newinsert");
+    },
+  },
+  computed: {
+    newExpense() {
+      return this.categories;
     },
   },
 };
@@ -87,7 +93,11 @@ export default {
         class="form-control"
         placeholder="enter categoory"
       />
-      <button @click="addCategory" class="btn btn-primary" id="categorybtn">
+      <button
+        @click="insertNewCategory"
+        class="btn btn-primary"
+        id="categorybtn"
+      >
         Add Category
       </button>
     </div>
@@ -119,15 +129,15 @@ export default {
         aria-label="Default select example"
         id="category-select"
       >
-        <option v-for="(name, key) in this.newExpense.categories" :key="key">
-          {{ key }}
+        <option value=""></option>
+        <option v-for="(name, key) in this.newExpense" :key="key">
+          {{ name }}
         </option>
       </select>
 
-      <button @click="addItem" class="btn btn-outline-primary" id="add-btn">
+      <button @click="tryAddDb" class="btn btn-outline-primary" id="add-btn">
         Add Expense
       </button>
-      <button @click="tryAddDb">add</button>
     </label>
   </div>
 </template>
