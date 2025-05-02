@@ -44,12 +44,12 @@ export default {
         <div
           class="form-check category-item"
           :class="{
-            'selected-category': selectedCategories.includes(category),
+            'selected-category': selectedCategories.includes(item),
           }"
           v-for="(item, category) in categories"
-          @click="categoryFilter(category)"
+          @click="categoryFilter(item)"
         >
-          {{ category }}
+          {{ item }}
         </div>
       </li>
     </ul>

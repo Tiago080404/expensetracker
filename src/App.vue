@@ -128,7 +128,7 @@ export default {
     :categories="onlyCategories"
   ></TransactionInput>
   <CategoryFilter
-    :categories="cats"
+    :categories="onlyCategories"
     @filter="setCategoryFilter"
   ></CategoryFilter>
   <div class="flex-container">
