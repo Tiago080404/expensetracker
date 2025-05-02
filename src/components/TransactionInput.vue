@@ -54,7 +54,6 @@ export default {
       await this.insertInDb(categoryId);
     },
     async insertInDb(categoryId) {
-      console.log(this.dateItem);
       const response = await fetch("http://localhost:8080/expenses", {
         method: "POST",
         headers: {
