@@ -3,6 +3,8 @@ import SearchForm from "./components/SearchForm.vue";
 import TransactionInput from "./components/TransactionInput.vue";
 import CategoryFilter from "./components/CategoryFilter.vue";
 import ChartForm from "./components/ChartForm.vue";
+import LoginPage from "./components/LoginPage.vue";
+import { Timer, Delete, Edit } from "@element-plus/icons-vue";
 export default {
   data() {
     return {
@@ -10,6 +12,8 @@ export default {
       searchValue: "",
       activeCategoryFilter: [],
       onlyCategories: null,
+      isAuthenticated: false,
+      currentUser: null,
     };
   },
   components: {
@@ -17,6 +21,10 @@ export default {
     TransactionInput,
     CategoryFilter,
     ChartForm,
+    LoginPage,
+    Timer,
+    Delete,
+    Edit,
   },
   methods: {
     updateCategories(newCategories) {
@@ -40,6 +48,7 @@ export default {
           headers: {
             "Content-type": "application/json",
           },
+          credentials: "include",
         });
         const data = await response.json();
         console.log("DB Categories", data);
@@ -52,7 +61,8 @@ export default {
     async getExpenses() {
       const response = await fetch("http://localhost:8080/expenses/user/2", {
         method: "GET",
-        "Content-type": "application/json",
+        headers: { "Content-type": "application/json" },
+        credentials: "include",
       });
       const data = await response.json();
       console.log(data);
@@ -71,7 +81,30 @@ export default {
           date: item.expenseDate,
         });
       });
+      console.log(grouped);
       return grouped;
+    },
+    async checkAuth() {
+      try {
+        const response = await fetch("http://localhost:8080/auth/me", {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-type": "application/json",
+          },
+        });
+        if (!response.ok) throw new Error("Nicht eingeloggt");
+
+        const userEmail = await response.text();
+        this.currentUser = userEmail;
+        console.log(this.currentUser);
+        this.isAuthenticated = true;
+        await this.getExpenses();
+        await this.getCategoriesDb();
+      } catch (err) {
+        console.error("Fehler beim Laden des Benutzers", err);
+        this.currentUser = null;
+      }
     },
   },
   computed: {
@@ -109,57 +142,118 @@ export default {
 
       return filtered;
     },
+    flatItems() {
+      return Object.entries(this.filteredItems).flatMap(
+        ([category, transactions]) =>
+          transactions.map((transaction) => ({
+            ...transaction,
+            category,
+          }))
+      );
+    },
   },
   async mounted() {
     await this.getExpenses();
     await this.getCategoriesDb();
   },
+  async created() {
+    await this.checkAuth();
+  },
 };
 </script>
 
 <template>
-  <h1>Expense Tracker</h1>
-  <SearchForm @search="handleSearch"></SearchForm>
-  <TransactionInput
-    @categories="updateCategories"
-    @newitems="updateItems"
-    @newinsert="getExpenses"
-    @newCatInsert="getCategoriesDb"
-    :categories="onlyCategories"
-  ></TransactionInput>
-  <CategoryFilter
-    :categories="onlyCategories"
-    @filter="setCategoryFilter"
-  ></CategoryFilter>
-  <div class="flex-container">
-    <table
-      class="table table-bordered table-striped table-hover table-lg table-responsive w-50 p-3"
-    >
-      <thead>
-        <tr>
-          <th scope="col">Category</th>
-          <th scope="col">Name</th>
-          <th scope="col">Cost</th>
-          <th scope="col">Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        <template
-          v-for="(transactions, category) in filteredItems"
-          :key="category"
-        >
+  <div v-if="this.isAuthenticated">
+    <nav class="navbar rounded" style="background-color: #e3f2fd">
+      <div
+        class="container-fluid d-flex justify-content-between align-items-center"
+      >
+        <p class="navbar-brand m-0">Welcome {{ this.currentUser }}</p>
+
+        <div class="position-absolute start-50 translate-middle-x">
+          <a class="navbar-brand" href="#">Expense Tracker</a>
+        </div>
+      </div>
+    </nav>
+
+    <SearchForm @search="handleSearch"></SearchForm>
+    <TransactionInput
+      @categories="updateCategories"
+      @newitems="updateItems"
+      @newinsert="getExpenses"
+      @newCatInsert="getCategoriesDb"
+      :categories="onlyCategories"
+    ></TransactionInput>
+    <CategoryFilter
+      :categories="onlyCategories"
+      @filter="setCategoryFilter"
+    ></CategoryFilter>
+    <div class="flex-container">
+      <!--   <table
+        class="table table-bordered table-striped table-hover table-lg table-responsive w-50 p-3 table-light"
+      >
+        <thead>
           <tr>
-            <td :rowspan="transactions.length + 1">{{ category }}</td>
+            <th scope="col">Category</th>
+            <th scope="col">Name</th>
+            <th scope="col">Cost</th>
+            <th scope="col">Date</th>
           </tr>
-          <tr v-for="(transaction, index) in transactions" :key="index">
-            <td>{{ transaction.name }}</td>
-            <td>{{ transaction.cost }}</td>
-            <td>{{ transaction.date }}</td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
-    <ChartForm :categories="cats"></ChartForm>
+        </thead>
+        <tbody>
+          <template
+            v-for="(transactions, category) in filteredItems"
+            :key="category"
+          >
+            <tr>
+              <td :rowspan="transactions.length + 1">{{ category }}</td>
+            </tr>
+            <tr v-for="(transaction, index) in transactions" :key="index">
+              <td>{{ transaction.name }}</td>
+              <td>{{ transaction.cost }}</td>
+              <td>{{ transaction.date }}</td>
+            </tr>
+          </template>
+        </tbody>
+      </table> -->
+      <div class="table-container">
+        <el-table :data="flatItems" style="width: 100%; border-radius: 15px">
+          <el-table-column prop="category" label="Category" width="180">
+            <template #default="scope">
+              <el-button type="primary" style="width: 90px">{{
+                scope.row.category
+              }}</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column prop="name" label="Name" width="150" />
+          <el-table-column prop="cost" label="Cost" width="150" />
+          <el-table-column prop="date" label="Date" width="150">
+            <template #default="scope">
+              <div style="display: flex; align-items: center">
+                <el-icon><Timer /></el-icon>
+                <span style="margin-left: 10px">{{ scope.row.date }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="Edit">
+            <el-button>
+              <el-icon><Edit /></el-icon>
+            </el-button>
+          </el-table-column>
+          <el-table-column label="Delete">
+            <template #default="scope">
+              <el-button type="danger"
+                ><el-icon><Delete /></el-icon
+              ></el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <ChartForm :categories="cats"></ChartForm>
+    </div>
+  </div>
+  <div v-else>
+    <LoginPage @authenticated="this.checkAuth()"></LoginPage>
   </div>
 </template>
 
@@ -189,5 +283,10 @@ h1 {
 .chart-container {
   width: 35%;
   height: 50vh;
+}
+.table-container {
+  background-color: #f5f7fa;
+  padding: 15px;
+  border-radius: 10px;
 }
 </style>
